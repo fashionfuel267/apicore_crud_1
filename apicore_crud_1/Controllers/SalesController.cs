@@ -132,14 +132,14 @@ namespace apicore_crud_1.Controllers
         {           
             var requestedFile = HttpContext.Request.Form.Files[0];            
             var p = HttpContext.Request.Form["orderdata"];
-            var entity = JsonConvert.DeserializeObject<orderDTO>(p); 
+            var entity = JsonConvert.DeserializeObject<Order>(p); 
             try
             {
 
                 if (requestedFile != null)
                 {
                     string ext = Path.GetExtension(requestedFile.FileName);
-                    string fileName = entity.Order.CustomerName + ext;
+                    string fileName = entity.CustomerName + ext;
                     string filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Pictures", fileName);
                     using (var stream = new FileStream(filePath, FileMode.Create))
                     {
@@ -147,10 +147,10 @@ namespace apicore_crud_1.Controllers
                     }
                     var order = new Order
                     {
-                        CustomerName = entity.Order.CustomerName,
-                        OrderDate = entity.Order.OrderDate,
-                        IsDelivered = entity.Order.IsDelivered,
-                        Details = entity.Order.Details,
+                        CustomerName = entity.CustomerName,
+                        OrderDate = entity.OrderDate,
+                        IsDelivered = entity.IsDelivered,
+                        Details = entity.Details,
                         Picture = "/Pictures/" + fileName
 
                     };

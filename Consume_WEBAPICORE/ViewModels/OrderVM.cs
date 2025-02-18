@@ -12,11 +12,8 @@ namespace Consume_WEBAPICORE.ViewModels
         [Required, DataType(DataType.Date)]
         public DateTime OrderDate { get; set; }
         public string Picture { get; set; }
-      public IFormFile Image { get; set; }
-
+        public IFormFile Image { get; set; }
         public bool IsDelivered { get; set; }
-
-     
-        public virtual ICollection<DetailsVM> Details { get; set; } = new List<DetailsVM>();
+        public virtual List<DetailsVM> Details { get; set; } = new List<DetailsVM>();
     }
 }

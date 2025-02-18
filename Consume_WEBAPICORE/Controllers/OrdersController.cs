@@ -33,7 +33,16 @@ namespace Consume_WEBAPICORE.Controllers
         public async Task<IActionResult> Create()
         {
             ViewBag.ProductId = new SelectList(await GetProduct(), "Id", "Name");
-            return View();
+            var model = new OrderVM()
+            {
+                Details = { new DetailsVM{
+                 OrderId=0,
+                 ProductId=0,
+                     Price=0,
+                } }
+            };
+             
+            return View(model);
         }
         [HttpPost]
         public async Task<IActionResult> Create(OrderVM order)

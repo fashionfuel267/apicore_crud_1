@@ -1,0 +1,219 @@
+﻿<div>
+	<form>
+
+        <fieldset>
+            <legend>Sales Order</legend>
+            <table style="width:30%">
+                <tr>
+                    <td>Order Number</td>
+                    <td>
+                        <input type="text" name="Id" value="" id="txtId" />
+                        <input type="text" name="ordernumber" value="" placeholder="Order Number" id="txtOrdernumber" />
+                    </td>
+                    <td>Customer Name</td>
+                    <td>
+                        <input type="text" name="customername" value="" placeholder="CustomerName" id="txtcustomername" />
+                    </td>
+                    <td>Order Date</td>
+                    <td>
+                        <input type="date" name="Orderdate" value="" placeholder="Order date" id="Orderdate" />
+                    </td>
+                    <td>Status</td>
+                    <td>
+                        <input type="checkbox" name="ISCompleted" placeholder="Order date" id="ISCompleted" />
+                    </td>
+                    <td>
+                        <input type="file" name="ImageFile" value="" id="ImageFile" />
+                    </td>
+                </tr>
+            </table>
+        </fieldset>
+        <fieldset>
+            <legend>Order Details</legend>
+            <table id="tblOrderdetails">
+                <thead>
+                    <tr>
+                        <th>ItemName</th>
+                        <th>Quantity</th>
+                        <th> Price</th>
+
+
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+
+                            @Html.DropDownList("ProductId",
+                                     (IEnumerable<SelectListItem>)ViewBag.ProductId, "Select Product", new { @id = "ProductId" })
+
+                        </td>
+                        <td>
+                            <input type="text" name="Quantity" />
+                        </td>
+                        <td>
+                            <input type="text" name="UnitPrice" />
+                        </td>
+
+                        <td>
+                            <input type="button" value="Add" name="add" id="btnadd" onclick="AddSaleOrderRow()" />
+                            <input type="button" value="Delete" name="delete" id="btndelete" onclick="DeleteSaleOrderRow(this)" />
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+
+                    <tr>
+
+                        <td colspan="6">
+                            <input type="button" name="Save order" id="btnsave" value="save Order" />
+
+                        </td>
+
+                    </tr>
+                </tfoot>
+            </table>
+        </fieldset>
+
+	</form>
+</div>
+@section scripts {
+    
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+
+            $("#btndelete").hide();
+            $("#btnsave").click(function(){
+                 alert("clicked")
+            OrderDetails = [];
+            total = 0.00;
+            var tblbody = $("#tblOrderdetails").find("tbody")
+            tblbody.find('tr').each(function () {
+                var itemName = $(this).find("td:eq(0) select[name=ProductId]").val();
+                var quantity = $(this).find("td:eq(1) input[type=text]").val();
+                var unitprice = $(this).find("td:eq(2) input[type=text]").val();
+
+
+                OrderDetails.push({
+                    "ProductId":parseInt( itemName), "Qty":parseInt( quantity), "Price":parseFloat(unitprice)
+                });
+
+            })
+            debugger;
+            console.log($("#ISCompleted").prop("checked"))
+            order = {
+                "Ordernumber": $("#txtOrdernumber").val(),
+                "Customername": $("#txtcustomername").val(),
+                "OrderDate": $("#Orderdate").val(),
+
+                "IsDelivered": $("#ISCompleted").prop("checked"),
+                "OrderDetails": OrderDetails,
+            }
+            var file = $('#ImageFile')[0].files[0];
+            console.log(file)
+              var reader = new FileReader();
+          const formData = new FormData( );
+            formData.append("lfile",file)
+            // formData.append("order",JSON.stringify(order))
+                    for (let [key, val] of Object.entries(order)) {
+                     formData.append(key, JSON.stringify(val));
+        }
+         
+           
+            
+            if (file) { reader.readAsDataURL(file);
+              $.ajax(
+
+               { url: 'https://localhost:7178/api/Sales/Upload',
+                    type: 'POST',
+                    dataType: 'JSON',
+
+                    data:  formData,
+                    contentType: 'multipart/form-data',
+                    success: function (data) {
+                        console.log(data)
+
+                    },
+                    error: function (error) {
+                            alert("please check image size");
+                        console.log(error.result)
+                        console.log(error.responseText)
+                      console.log(error.result)
+                    }
+                }
+
+                );
+            
+            }
+            else { alert('Please select a file first.'); }
+            })
+        })
+         function SaveOrderDetails() {
+             alert("clicked")
+            var data = new FormData();
+            OrderDetails = [];
+            var tblbody = $("#tblOrderdetails").find("tbody")
+            tblbody.find('tr').each(function () {
+                var itemName = $(this).find("td:eq(0) select[name=ProductId]").val();
+                var quantity = $(this).find("td:eq(1) input[type=text]").val();
+                var unitprice = $(this).find("td:eq(2) input[type=text]").val();
+
+
+                OrderDetails.push({
+                    "ProductId": itemName, "Qty": quantity, "Price": unitprice
+                });
+
+            })
+
+            console.log($("#ISCompleted").prop("checked"))
+
+            order = {
+                "Ordernumber": $("#txtOrdernumber").val(),
+                "Customername": $("#txtcustomername").val(),
+                "OrderDate": $("#Orderdate").val(),
+
+                "IsDelivered": $("#ISCompleted").prop("checked"),
+                "OrderDetails": OrderDetails,
+            }
+            var file = $('#ImageFile')[0].files[0];
+            console.log(file)
+            var reader = new FileReader();
+            console.log(salesOrder)
+            reader.onloadend = function () {
+                console.log(reader.result)
+                var base64Image = reader.result.split(',')[1];
+                $.ajax({
+                    type: 'POST',
+                   
+                    dataType: 'JSON',
+                    url: '/orders/Create',
+                    data: JSON.stringify(order),
+                    /*  data: salesOrder,*/
+                    contentType: 'application/json;charset=UTF-8',
+                    success: function (data) {
+                        console.log(data)
+                    },
+                    error: function (error) {
+                        alert("There is problem");
+                        console.log(error)
+                    }
+                });
+            }
+            if (file) { reader.readAsDataURL(file); }
+            else { alert('Please select a file first.'); }
+        }
+        function AddSaleOrderRow() {
+            $("#btndelete").show();
+            var tblbody = $("#tblOrderdetails").find("tbody")
+            var tblLastRow = tblbody.find("tr:last")
+            var tblClone = tblLastRow.clone().find("input[type=text]").val('').end();
+            tblLastRow.after(tblClone);
+            $("#btndelete").hide();
+        }
+        function DeleteSaleOrderRow() {
+            $("#btndelete").closest("tr").remove();
+        }
+    </script>
+}
