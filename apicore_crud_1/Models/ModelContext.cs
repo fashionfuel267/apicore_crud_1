@@ -12,6 +12,17 @@ namespace apicore_crud_1.Models
         public DbSet<Product> Products { get; set; }    
         public DbSet<Order> Orders { get; set; }
         public DbSet<Detail> Details { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            //base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<Order>()
+                        .Navigation(a => a.Details)
+                        .AutoInclude();
+            modelBuilder.Entity<Detail>()
+                      .Navigation(a => a.Product)
+                      .AutoInclude();
+        }
     }
     public class Product
     {
@@ -54,7 +65,8 @@ namespace apicore_crud_1.Models
         public int ProductId { get; set; }
         [Required, DataType(DataType.Currency)]
         public decimal Price { get; set; }
-
+        [NotMapped]
+        public string ProductName { get; set; }
         public virtual Product Product { get; set; }
         public virtual Order Order { get; set; }
         

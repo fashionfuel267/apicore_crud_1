@@ -1,4 +1,5 @@
 ﻿using System.Net.Http;
+using System.Reflection;
 using Consume_WEBAPICORE.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -45,40 +46,54 @@ namespace Consume_WEBAPICORE.Controllers
             return View(model);
         }
         [HttpPost]
-        public async Task<IActionResult> Create(OrderVM order)
+        public async Task<IActionResult> Create(OrderVM order, string act = "")
         {
-            var jsonSerializerSettings = new JsonSerializerSettings
-            {
-                StringEscapeHandling = StringEscapeHandling.EscapeNonAscii
-            };
-            string orderString = JsonConvert.SerializeObject(order, jsonSerializerSettings);
-            var content = new MultipartFormDataContent();
-           // content.Add(new StringContent(orderString, "Orderdata"));
-            content.Add(new StringContent(orderString), "orderdata");
-            //content.Add(new StringContent(entity.ContactNumber), "ContactNumber");
-            if (order.Image != null)
-            {
-                var imageContent = new StreamContent(order.Image.OpenReadStream());
-                imageContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue (order.Image.ContentType);
-                content.Add(imageContent, "LOGOFile", order.Image.FileName);
 
-            }
-            HttpClient client = _factory.CreateClient();
-            client.BaseAddress =
-            new Uri("https://localhost:7178/api/");
-            client.DefaultRequestHeaders.Add(
-            HeaderNames.UserAgent, "ExchangeRateViewer");
-            var response = await client.PostAsync("sales",content);
-            
-             
-            if (response.IsSuccessStatusCode)
+            if (act == "add")
             {
-                return RedirectToAction("index");
+                order.Details.Add(new DetailsVM());
             }
+            if (act.StartsWith("remove"))
+            {
 
+                int index = int.Parse(act.Substring(act.IndexOf("_") + 1));
+                order.Details.RemoveAt(index);
+            }
+            if (act == "Save")
+            {
+                var jsonSerializerSettings = new JsonSerializerSettings
+                {
+                    StringEscapeHandling = StringEscapeHandling.EscapeNonAscii
+                };
+                string orderString = JsonConvert.SerializeObject(order, jsonSerializerSettings);
+                var content = new MultipartFormDataContent();
+                // content.Add(new StringContent(orderString, "Orderdata"));
+                content.Add(new StringContent(orderString), "orderdata");
+                //content.Add(new StringContent(entity.ContactNumber), "ContactNumber");
+                if (order.Image != null)
+                {
+                    var imageContent = new StreamContent(order.Image.OpenReadStream());
+                    imageContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(order.Image.ContentType);
+                    content.Add(imageContent, "LOGOFile", order.Image.FileName);
+
+                }
+                HttpClient client = _factory.CreateClient();
+                client.BaseAddress =
+                new Uri("https://localhost:7178/api/");
+                client.DefaultRequestHeaders.Add(
+                HeaderNames.UserAgent, "ExchangeRateViewer");
+                var response = await client.PostAsync("sales", content);
+
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return RedirectToAction("index");
+                }
+            }
 
             ViewBag.ProductId = new SelectList(await GetProduct(), "Id", "Name");
             return View();
+
         }
         private async Task< IEnumerable<ProductVM>> GetProduct()
         {
@@ -92,5 +107,73 @@ namespace Consume_WEBAPICORE.Controllers
             var result = await response.Content.ReadFromJsonAsync<IEnumerable<ProductVM>>();
             return result?? Enumerable.Empty<ProductVM>();
         }
+
+        [HttpGet]
+        public async Task<IActionResult> Edit(int? id)
+        {
+            ViewBag.ProductId = new SelectList(await GetProduct(), "Id", "Name");
+            if (id == null) {
+
+                return BadRequest();
+            }
+            HttpClient client = _factory.CreateClient();
+            client.BaseAddress =
+            new Uri("https://localhost:7178/api/");
+            client.DefaultRequestHeaders.Add(
+            HeaderNames.UserAgent, "ExchangeRateViewer");
+            var response = await client.GetAsync("Sales/" + id.Value);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<OrderVM>();
+            return View(result);
+        }
+        [HttpPost]
+        public async Task<IActionResult> Edit(OrderVM order,string act = "")
+        {
+            if (act == "add")
+            {
+                order.Details.Add(new DetailsVM());
+            }
+            if (act.StartsWith("remove"))
+            {
+
+                int index = int.Parse(act.Substring(act.IndexOf("_") + 1));
+                order.Details.RemoveAt(index);
+            }
+            if (act == "Update")
+            {
+                var jsonSerializerSettings = new JsonSerializerSettings
+                {
+                    StringEscapeHandling = StringEscapeHandling.EscapeNonAscii
+                };
+                string orderString = JsonConvert.SerializeObject(order, jsonSerializerSettings);
+                var content = new MultipartFormDataContent();
+                // content.Add(new StringContent(orderString, "Orderdata"));
+                content.Add(new StringContent(orderString), "orderdata");
+                //content.Add(new StringContent(entity.ContactNumber), "ContactNumber");
+                if (order.Image != null)
+                {
+                    var imageContent = new StreamContent(order.Image.OpenReadStream());
+                    imageContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(order.Image.ContentType);
+                    content.Add(imageContent, "LOGOFile", order.Image.FileName);
+
+                }
+                HttpClient client = _factory.CreateClient();
+                client.BaseAddress =
+                new Uri("https://localhost:7178/api/");
+                client.DefaultRequestHeaders.Add(
+                HeaderNames.UserAgent, "ExchangeRateViewer");
+                var response = await client.PutAsync("sales", content);
+
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return RedirectToAction("index");
+                }
+            }
+            ViewBag.ProductId = new SelectList(await GetProduct(), "Id", "Name");
+            return View(order);
+        }
+
+
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Drawing.Printing;
+using System.Net.Http.Headers;
 using apicore_crud_1.DTO;
 using apicore_crud_1.Models;
 using Microsoft.AspNetCore;
@@ -43,14 +44,16 @@ namespace apicore_crud_1.Controllers
                     Id = a.Id,                 
                     Price = a.Price,
                     OrderId=a.OrderId,
-                    ProductId = a.ProductId
+                    ProductId = a.ProductId,
+                   ProductName=a.Product.Name
+
                 }).ToList()
             }).ToList();
 
             return Ok(orderDtos);
         }
         [HttpGet("{id}")]
-        public async Task<ActionResult<Order>> GetOrderById(int id)
+        public async Task<ActionResult<Order>> Get(int id)
         {
             var p = await db.Orders.Include(p => p.Details).ThenInclude(a => a.Product).FirstOrDefaultAsync(p => p.Id == id);
             if (p == null) return NotFound();
@@ -168,47 +171,121 @@ namespace apicore_crud_1.Controllers
             }
         }
 
-        [Route("Upload")]
-        [HttpPost, DisableRequestSizeLimit]
-        public IActionResult UploadPic()
+        [HttpPut]
+        public IActionResult Put()
         {
-            try
+            var p = HttpContext.Request.Form["orderdata"];
+            var entity = JsonConvert.DeserializeObject<Order>(p);
+            var existing = db.Orders.Find(entity.Id);
+            if (HttpContext.Request.Form.Files.Count > 0)
             {
-                var file = Request.Form.Files[0];
-                var MemberId = Request.Form["order"];
-                var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), "Pictures");
-                if (file.Length > 0)
+                var requestedFile = HttpContext.Request.Form.Files[0];
+                if (requestedFile != null)
                 {
-                    //logo
-                    var fileName = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName.Trim('"');
-                    var ext = Path.GetExtension(fileName).ToLower();
-                    var fullPath = Path.Combine(pathToSave, MemberId + ext);
-
-                    if (ext == ".jpg" || ext == ".png" || ext == ".jpeg")
+                    string ext = Path.GetExtension(requestedFile.FileName);
+                    string fileName = entity.CustomerName + ext;
+                    string filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Pictures", fileName);
+                    using (var stream = new FileStream(filePath, FileMode.Create))
                     {
+                        requestedFile.CopyTo(stream);
+                    }
+                    existing.Picture = "/Pictures/" + fileName;
+                }
+            }
+            else
+            {
+                existing.Picture = entity.Picture;
+            }
 
-                        using (var stream = new FileStream(fullPath, FileMode.Create))
-                        {
-                            file.CopyTo(stream);
-                        }
-                        return Ok();
+            using (var transaction= db.Database.BeginTransaction()) 
+            {
+                try
+                {
+                //var details= db.Details.Where(i=>i.OrderId.Equals(entity.Id));
+                // db.Details.RemoveRange(details);
+                //if (db.SaveChanges() > 0)
+                //{
+                        //db.ChangeTracker.Clear();
+                        existing.CustomerName = entity.CustomerName;
+                    existing.OrderDate = entity.OrderDate;
+                    existing.IsDelivered = entity.IsDelivered;
+                    existing.Id = entity.Id;
+                    existing.Details = entity.Details;
+                    db.Entry(existing).State= EntityState.Modified;
+                    if (db.SaveChanges() > 0)
+                    {
+                            transaction.Commit();
+                        return Ok(existing);
                     }
                     else
                     {
-                        return BadRequest();
+                            transaction.Rollback();
+                        return Problem("Save fialed");
                     }
-                }
-
-                else
-                {
-                    return Problem("File Missing");
-                }
+                //}
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Internal server error: {ex.InnerException?.Message ?? ex.Message}");
+                    transaction.Rollback();
+                return Problem(ex.InnerException != null?ex.InnerException.Message : ex.Message);
             }
+            }
+            return Problem("Problem occured during Update");
         }
 
+
+        //[Route("Upload")]
+        //[HttpPost, DisableRequestSizeLimit]
+        //public IActionResult UploadPic()
+        //{
+        //    try
+        //    {
+        //        var file = Request.Form.Files[0];
+        //        var MemberId = Request.Form["order"];
+        //        var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), "Pictures");
+        //        if (file.Length > 0)
+        //        {
+        //            //logo
+        //            var fileName = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName.Trim('"');
+        //            var ext = Path.GetExtension(fileName).ToLower();
+        //            var fullPath = Path.Combine(pathToSave, MemberId + ext);
+
+        //            if (ext == ".jpg" || ext == ".png" || ext == ".jpeg")
+        //            {
+
+        //                using (var stream = new FileStream(fullPath, FileMode.Create))
+        //                {
+        //                    file.CopyTo(stream);
+        //                }
+        //                return Ok();
+        //            }
+        //            else
+        //            {
+        //                return BadRequest();
+        //            }
+        //        }
+
+        //        else
+        //        {
+        //            return Problem("File Missing");
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, $"Internal server error: {ex.InnerException?.Message ?? ex.Message}");
+        //    }
+        //}
+        [HttpDelete("{id}")]
+        public async Task<ActionResult<Order>> Delete(int id)
+        {
+            var p = await db.Orders.Include(p => p.Details).FirstOrDefaultAsync(p => p.Id == id);
+            if (p == null) return NotFound();
+             db.Orders.Remove(p);
+            if(db.SaveChanges() > 0)
+            {
+                return Ok();
+            }
+            return Problem("Deletion failed");
+        }
     }
 }
